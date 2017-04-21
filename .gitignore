@@ -26,6 +26,8 @@ coverage
 # Compiled binary addons (http://nodejs.org/api/addons.html)
 build/Release
 
+assets/*
+addons/ImageProcessing/build/*
 # Dependency directories
 node_modules
 jspm_packages
@@ -35,3 +37,5 @@ jspm_packages
 
 # Optional REPL history
 .node_repl_history
+.DS_Store
+

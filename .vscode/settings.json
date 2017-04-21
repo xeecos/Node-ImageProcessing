@@ -1,0 +1,12 @@
+{
+    "files.associations": {
+        "xstring": "cpp",
+        "system_error": "cpp",
+        "xlocmon": "cpp",
+        "xiosbase": "cpp",
+        "iosfwd": "cpp",
+        "xlocale": "cpp",
+        "cmath": "cpp",
+        "limits": "cpp"
+    }
+}
