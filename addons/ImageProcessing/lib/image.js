@@ -1,7 +1,7 @@
 function Image() {
     const self = this;
     self.pixels = [];
-    self.buffer = null;
+    self.data = null;
     self.width = 0;
     self.height = 0;
     self.putPixels = function(data, width, height) {
@@ -14,7 +14,7 @@ function Image() {
                 };
                 self.pixels.push(col);
             }
-            self.buffer = Buffer.from(data);
+            self.data = Buffer.from(data);
             self.width = width;
             self.height = height;
         }

@@ -111,15 +111,6 @@ void colorScale(unsigned char*pixels,int width,int height,int threshold){
             pixels[3*i + 1] = gray;
             pixels[3*i + 2] = gray;
         }
-        // gray = 255-h;
-        // if((h<30||h>330)&&gray<200){
-        //   gray = 0xff;
-        // }else{
-        //   gray = 0x0;
-        // }
-        // pixels[3*i] = gray;
-        // pixels[3*i + 1] = gray;
-        // pixels[3*i + 2] = gray;
     }
 }
 void grayScale(unsigned char*pixels,int width,int height){
@@ -132,6 +123,66 @@ void grayScale(unsigned char*pixels,int width,int height){
         pixels[3*i + 1] = gray;
         pixels[3*i + 2] = gray;
     }
+}
+struct HoughCircle{
+    int x;
+    int y;
+    int r;
+    int vote = 0;
+};
+struct Point{
+    int x;
+    int y;
+};
+struct HoughSpace{
+    int index;
+    HoughCircle circles[100000];
+};
+HoughSpace space;
+int findSpace(int x,int y,int r){
+    for(int i=0;i<space.index;i++){
+        HoughCircle c = space.circles[i];
+        if(c.x==x&&c.y==y&&c.r==r){
+            return i;
+        }
+    }
+    space.circles[space.index].x = x;
+    space.circles[space.index].y = y;
+    space.circles[space.index].r = r;
+    space.index++;
+    return space.index-1;
+}
+int circleScale(unsigned char*pixels,int width,int height,int minRadius,int maxRadius){
+    Point points[10000];
+    unsigned char*copyPixels = (unsigned char*)malloc(width*height);
+    int index,copyIndex = 0;
+    for (int i = 0; i < width * height; i++) {
+        index = i*3;
+        if(pixels[index]<20){
+            points[copyIndex].x = (i%width);
+            points[copyIndex].y = floor(i/width);
+            copyIndex++;
+        }
+        // pixels[index] = 0xff;
+        // pixels[index+1] = 0xff;
+        // pixels[index+2] = 0xff;
+    }
+    space.index = 0;
+    double rad = 3.1415926/180.0;
+    for(int i=0;i<copyIndex;i++){
+        int x = points[i].x;
+        int y = points[i].y;
+        for(int r = minRadius ; r < maxRadius;r++){
+            for(int t=0;t<360;t+=30){
+                int xx = x+r*sin(t*rad); //polar coordinate for center r*sin(t*rad)
+                int yy = y+r*cos(t*rad);  //polar coordinate for center r*cos(t*rad)
+                if(xx>0&&yy>0&&xx<width&&yy<height){
+                    space.circles[findSpace(xx,yy,r)].vote++;
+                }
+            }
+        } 
+    }
+    return space.index;
 }
 void binarization(unsigned char*pixels,int width,int height,int threshold){
     int gray;
@@ -278,7 +329,19 @@ void searchStartPixel(unsigned char*pixels,unsigned char*buf,int width,int heigh
         size[0] = width;
         size[1] = height;
 }
-void contourDetection(unsigned char*pixels,int width,int height,v8::Isolate* isolate){
+struct Circle
+{
+     float x;
+     float y;
+     float r;
+     float w;
+     float h;
+};
+struct Circles{
+    int len = 0;
+    Circle objects[50];
+};
+Circles contourDetection(unsigned char*pixels,int width,int height,v8::Isolate* isolate){
     // 読み取り用ピクセルデータ（書き換えない）
     unsigned char *pixelData = (unsigned char *)malloc(width*height*sizeof(unsigned char)); // 読み取り用ピクセルデータ
     for (int i = 0; i < width; ++i) {
@@ -326,6 +389,8 @@ void contourDetection(unsigned char*pixels,int width,int height,v8::Isolate* iso
     int pxVal; // 着目するピクセルの色
     // int duplicatedPx = []; // 複数回、輪郭として検出されたピクセル座標を格納（将来的にこのような重複を許さないアルゴリズムにしたい）
     int index = 0;
+    Circles objects;
+    int objectIndex = 0;
     while (1) {
     //     // 輪郭追跡開始ピクセルを探す
         searchStartPixel(pixelData,buf,width,height,dPx);
@@ -397,13 +462,17 @@ void contourDetection(unsigned char*pixels,int width,int height,v8::Isolate* iso
     	}
     }
 
+    float minX = 1000;
+    float maxX = 0;
+    float minY = 1000;
+    float maxY = 0;
     for (int i = 0; i < 50; ++i) {
         float cx = 0;
         float cy = 0;
-        float minX = 1000;
-        float maxX = 0;
-        float minY = 1000;
-        float maxY = 0;
+         minX = 1000;
+         maxX = 0;
+         minY = 1000;
+         maxY = 0;
         for (int j = 0; j < pixelsArr[i]->Length()/2; ++j) {
             float px = pixelsArr[i]->Get(j*2)->Int32Value();
             float py = pixelsArr[i]->Get(j*2+1)->Int32Value();
@@ -432,7 +501,7 @@ void contourDetection(unsigned char*pixels,int width,int height,v8::Isolate* iso
             float dx = cx - pixelsArr[i]->Get(j*2)->Int32Value();
             float dy = cy - pixelsArr[i]->Get(j*2+1)->Int32Value();
             cr = sqrt(dx * dx + dy * dy);
-            if (abs(cr - dr) > 10) {
+            if (abs(cr - dr) > 5) {
                 count++;
             }
             r += cr;
@@ -441,22 +510,24 @@ void contourDetection(unsigned char*pixels,int width,int height,v8::Isolate* iso
              continue;
         }
         for(int j=0;j<pixelsArr[i]->Length();j++){
-          idx=width*pixelsArr[i]->Get(j*2+1)->Int32Value()+pixelsArr[i]->Get(j*2)->Int32Value();
-          pixels[3*idx]=255;
-          pixels[3*idx+1]=0;
-          pixels[3*idx+2]=0;
+            int x = pixelsArr[i]->Get(j*2)->Int32Value();
+            int y = pixelsArr[i]->Get(j*2+1)->Int32Value();
+            idx=width*y+x;
+            pixels[3*idx]=255;
+            pixels[3*idx+1]=0;
+            pixels[3*idx+2]=0;
         }
+        objects.objects[objects.len].x = (maxX+minX)/2;
+        objects.objects[objects.len].y = (maxY+minY)/2;
+        objects.objects[objects.len].r = (maxY-minY)/4+(maxX-minX)/4;
+        objects.len++;
     }
+    return objects;
 }
 void getPixels(const v8::FunctionCallbackInfo<v8::Value>& args) {
   v8::Isolate* isolate = args.GetIsolate();
   v8::HandleScope scope(isolate);
   Local<Object> bufferObj = args[0]->ToObject();
-//   Local<Value> threshold = args[1];
-//   Local<Value> numIteration = args[2];
-//   Local<Value> lowThreshold = args[2];
-//   Local<Value> highThreshold = args[3];
-//   Local<Value> sigma = args[1];
   const unsigned char * buf = (const unsigned char *)node::Buffer::Data(bufferObj);
   size_t size = node::Buffer::Length(bufferObj);
   Jpeg::Decoder decoder(buf, size);
@@ -464,14 +535,6 @@ void getPixels(const v8::FunctionCallbackInfo<v8::Value>& args) {
   unsigned char *pixels = decoder.GetImage();
   int width = decoder.GetWidth();
   int height = decoder.GetHeight();
-//   grayScale(pixels,width,height);
-//   CannyEdgeDetector *canny = new CannyEdgeDetector();
-//   unsigned char *edge ;
-//   pixels = canny->ProcessImage(pixels,width,height,sigma->NumberValue(),lowThreshold->Int32Value(),highThreshold->Int32Value());
-//  canny.edges(edge, pixels, filter, low_threshold,   high_threshold);
-//   binarization(pixels,width,height,threshold->Int32Value());
-//   openning(pixels,width,height,numIteration->Int32Value());
-//   contourDetection(pixels,width,height,isolate);
   long pixelsLength = decoder.GetImageSize();
   Local<Array> pixelsArr = Array::New(isolate);
   for(int i=0;i<pixelsLength;i++){
@@ -580,13 +643,58 @@ void getHistogram(const v8::FunctionCallbackInfo<v8::Value>& args) {
     pixelsObj->Set(String::NewFromUtf8(isolate, "height"), v8::Integer::New(isolate,height));
     args.GetReturnValue().Set(pixelsObj);
 }
+
+void getObjectDetect(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    v8::Isolate* isolate = args.GetIsolate();
+    v8::HandleScope scope(isolate);
+    Local<Object> bufferObj = args[0]->ToObject();
+    int width = args[1]->Int32Value();
+    int height = args[2]->Int32Value();
+    int minRadius = args[3]->Int32Value();
+    int maxRadius = args[4]->Int32Value();
+    int voteThreshold = args[5]->Int32Value();
+    // int colorThreshold = args[5]->Int32Value();
+    unsigned char * pixels = ( unsigned char *)node::Buffer::Data(bufferObj);
+    Local<Object> pixelsObj = Object::New(isolate);
+    int l = circleScale(pixels,width,height,minRadius,maxRadius);
+    // colorScale(pixels,width,height,colorThreshold);
+    // grayScale(pixels,width,height);
+    // binarization(pixels,width,height,threshold);
+    // openning(pixels,width,height,numIteration);
+    // Circles objects;// = contourDetection(pixels,width,height,isolate);
+    
+    Local<Array> pixelsArr = Array::New(isolate);
+    for(int i=0;i<width*height*3;i++){
+        pixelsArr->Set(i,v8::Integer::New(isolate,pixels[i]));
+    }
+    Local<Array> objectsArr = Array::New(isolate);
+    int index = 0;
+    for(int i=0;i<space.index;i++){
+        HoughCircle c = space.circles[i];
+        if(c.vote>voteThreshold){
+            Local<Object> circleObj = Object::New(isolate);
+            circleObj->Set(String::NewFromUtf8(isolate, "x"), v8::Number::New(isolate,c.x));
+            circleObj->Set(String::NewFromUtf8(isolate, "y"), v8::Number::New(isolate,c.y));
+            circleObj->Set(String::NewFromUtf8(isolate, "r"), v8::Number::New(isolate,c.r));
+            objectsArr->Set(index,circleObj);
+            index++;
+        }
+    }
+    pixelsObj->Set(String::NewFromUtf8(isolate, "data"), pixelsArr);
+    pixelsObj->Set(String::NewFromUtf8(isolate, "width"), v8::Integer::New(isolate,width));
+    pixelsObj->Set(String::NewFromUtf8(isolate, "height"), v8::Integer::New(isolate,height));
+    pixelsObj->Set(String::NewFromUtf8(isolate, "objects"), objectsArr);
+
+    args.GetReturnValue().Set(pixelsObj);
+}
 void init(v8::Local<v8::Object> exports) {
-  NODE_SET_METHOD(exports, "getPixels", getPixels);
-  NODE_SET_METHOD(exports, "grayScale", getGrayScale);
-  NODE_SET_METHOD(exports, "colorScale", getColorScale);
-  NODE_SET_METHOD(exports, "binarization", getBinarization);
-  NODE_SET_METHOD(exports, "edge", getEdge);
-  NODE_SET_METHOD(exports, "histogram", getHistogram);
+    NODE_SET_METHOD(exports, "getPixels", getPixels);
+    NODE_SET_METHOD(exports, "grayScale", getGrayScale);
+    NODE_SET_METHOD(exports, "colorScale", getColorScale);
+    NODE_SET_METHOD(exports, "binarization", getBinarization);
+    NODE_SET_METHOD(exports, "edge", getEdge);
+    NODE_SET_METHOD(exports, "histogram", getHistogram);
+    NODE_SET_METHOD(exports, "objectDetect", getObjectDetect);
 }
 
 NODE_MODULE(binding, init);

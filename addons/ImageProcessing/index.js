@@ -1,6 +1,11 @@
 function ImageProcessing() {
     const self = this;
     const ImageFilter = require("./lib/image-filters.js");
+    const ObjectDetector = require("./lib/object-detector.js");
+
+    self.resize = function(data, scale) {
+        return ImageFilter.resize(data, scale);
+    };
     self.grayScale = function(data) {
         return ImageFilter.grayScale(data);
     }
@@ -15,6 +20,9 @@ function ImageProcessing() {
     }
     self.histogram = function(data) {
         return ImageFilter.histogram(data);
+    }
+    self.circleDetect = function(data) {
+        return ObjectDetector.detect(data, "circle");
     }
     return self;
 }

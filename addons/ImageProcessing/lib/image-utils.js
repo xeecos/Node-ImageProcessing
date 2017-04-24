@@ -23,21 +23,41 @@ function ImageUtils() {
         return data.data != null;
     }
 
-    self.toImage = function(data) {
+    self.toImage = function(data, scale) {
+        var image = null;
         if (isBuffer(data)) {
-            var image = JpegDecoder.decode(data);
-            return image;
+            image = JpegDecoder.decode(data);
         } else if (isImage(data)) {
-            return data;
+            image = data;
         } else if (isString(data)) {
-            var image = JpegDecoder.fromFile(data);
-            return image;
+            image = JpegDecoder.fromFile(data);
         } else if (isPixels(data)) {
-            var image = new Image();
+            image = new Image();
             image.putPixels(data.data, data.width, data.height);
-            return image;
         }
-        return null;
+        if (scale && image) {
+            var per = Math.round(1 / scale);
+            var output = new Image();
+            var pixels = [];
+            var oriWidth = image.width;
+            var oriHeight = image.height;
+            var width = Math.round(image.width * scale);
+            var height = Math.round(image.height * scale)
+            for (var j = 0; j < height; j++) {
+                for (var i = 0; i < width; i++) {
+                    var x = Math.floor(i * per);
+                    var y = Math.floor(j * per);
+                    var index = (y * oriWidth + x) * 3;
+                    pixels.push(image.data[index]);
+                    pixels.push(image.data[index + 1]);
+                    pixels.push(image.data[index + 2]);
+                }
+            }
+            console.log(pixels.length / 3 / 640);
+            output.putPixels(pixels, width, height);
+            return output;
+        }
+        return image;
     }
     return self;
 }

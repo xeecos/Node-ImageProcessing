@@ -1,11 +1,11 @@
 function ObjectDetect() {
     const self = this;
-    const JpegDecoder = require("./jpeg-decoder.js");
+    const ImageUtils = require("./image-utils.js");
     const ImageProcessingC = require('../build/Release/imageprocessing.node');
     self.detect = function(data, shape) {
         shape = shape || "circle";
         var image = ImageUtils.toImage(data);
-        return ImageProcessingC.objectDetect(image.buffer, image.width, image.height, shape);
+        return ImageProcessingC.objectDetect(image.data, image.width, image.height, 8, 15, 6, shape);
     }
     return self;
 }
