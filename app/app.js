@@ -3,7 +3,7 @@ const jpeg = require('jpeg-js');
 var buffer = fs.readFileSync("./assets/test.jpg");
 const ImageProcessing = require('../addons/ImageProcessing/index.js');
 // .getPixels(buffer, 250, 3);
-var image = ImageProcessing.circleDetect(ImageProcessing.edge(ImageProcessing.resize(buffer, 0.1), 1, 30, 30)); //ImageProcessing.circleDetect((buffer));
+var image = ImageProcessing.circleDetect(ImageProcessing.edge(ImageProcessing.resize(buffer, 0.05), 1, 30, 30), 4, 8, 6); //ImageProcessing.circleDetect((buffer));
 var width = image.width;
 var height = image.height;
 console.log(width, height, image.objects)

@@ -25,14 +25,14 @@ function ImageFilter() {
         var image = ImageUtils.toImage(data);
         var t = new Date().getTime();
         var obj = ImageProcessingC.edge(image.data, image.width, image.height, sigma, lowThreshold, highThreshold, true);
-        console.log(new Date().getTime() - t);
+        console.log("time:", new Date().getTime() - t);
         return obj;
     }
     self.histogram = function(data) {
         var image = ImageUtils.toImage(data);
         var t = new Date().getTime();
         var obj = ImageProcessingC.histogram(image.data, image.width, image.height);
-        console.log(new Date().getTime() - t);
+        console.log("time:", new Date().getTime() - t);
         return obj;
     }
     return self;

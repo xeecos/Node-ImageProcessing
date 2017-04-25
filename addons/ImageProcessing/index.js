@@ -21,8 +21,8 @@ function ImageProcessing() {
     self.histogram = function(data) {
         return ImageFilter.histogram(data);
     }
-    self.circleDetect = function(data) {
-        return ObjectDetector.detect(data, "circle");
+    self.circleDetect = function(data, minRadius, maxRadius, threshold) {
+        return ObjectDetector.detect(data, minRadius, maxRadius, threshold, "circle");
     }
     return self;
 }
